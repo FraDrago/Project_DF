@@ -25,7 +25,7 @@ import cv2
 
 train_path="C:/Users/Franc/OneDrive/Desktop/PROGETTO/Dataset/PeopleFace"
 
-
+##I extract images from the folders and create the dataset train_x
 x_train=[]
 
 for folder in sorted(os.listdir(train_path)):
@@ -48,7 +48,6 @@ train_x=np.array(x_train)
 from keras.preprocessing.image import ImageDataGenerator
 
 train_datagen = ImageDataGenerator(rescale = 1./255)
-
 training_set = train_datagen.flow_from_directory(train_path,
                                                  target_size = (224, 224),
                                                  batch_size = 32,
@@ -56,14 +55,8 @@ training_set = train_datagen.flow_from_directory(train_path,
 
 train_y=training_set.classes
 
-print("train_y shape: ", train_y.shape)
-print(type(train_y))
-
 label_ids= training_set.class_indices
-print(label_ids)
 
-print(train_y.shape)
-print(train_x.shape)
 
 def plot_images(images, labels, predictions=None, class_names=None):
     assert len(images) == len(labels) == 9
@@ -108,7 +101,6 @@ plot_images(  #plot image in BGR format
 train_x, train_y = shuffle(train_x, train_y, random_state=1)
 #create test set
 from sklearn.model_selection import train_test_split
-train_images, test_images, train_labels, test_labels = train_test_split(train_x, train_y, test_size=0.33, random_state=1)
 train_x, test_x, train_y, test_y = train_test_split(train_x, train_y, test_size=0.33, random_state=1)
 
 train_labels = train_y
