@@ -26,69 +26,41 @@ import cv2
 train_path="C:/Users/Franc/OneDrive/Desktop/PROGETTO/Dataset/PeopleFace"
 
 ##I extract images from the folders and create the dataset train_x
-x_train=[]
 
-for folder in sorted(os.listdir(train_path)):
+train_datagen = ImageDataGenerator(
+        rescale=1./255,
+        fill_mode='nearest',
+        validation_split=0.2)
 
-    sub_path=train_path+"/"+folder
-    print(sub_path)
+test_datagen = ImageDataGenerator(rescale=1 / 255.0)
 
-    for img in os.listdir(sub_path):
+train_generator = train_datagen.flow_from_directory(
+        'D:/Project_DF/FaceRecogRefSoft/croppedfaces',
+        target_size=(256, 256),
+        batch_size=32,
+        class_mode='categorical',
+        subset='training') #set as training data
 
-        image_path=sub_path+"/"+img
+validation_generator = train_datagen.flow_from_directory(
+    'D:/Project_DF/FaceRecogRefSoft/croppedfaces', #same directory as training data
+    target_size=(256, 256),
+    batch_size=32,
+    class_mode='categorical',
+    subset='validation',
+    shuffle=False
+    ) #set as validation data
 
-        img_arr=cv2.imread(image_path)
+test_generator = test_datagen.flow_from_directory(
+    directory='D:/Project_DF/FaceRecogRefSoft/croppedfacesTest',
+    target_size=(256, 256),
+    batch_size=32,
+    class_mode='categorical',
+    shuffle=False
+)
 
-        img_arr=cv2.resize(img_arr,(256,256))
-
-        x_train.append(img_arr)
-
-train_x=np.array(x_train)
-
-from keras.preprocessing.image import ImageDataGenerator
-
-train_datagen = ImageDataGenerator(rescale = 1./255)
-training_set = train_datagen.flow_from_directory(train_path,
-                                                 target_size = (224, 224),
-                                                 batch_size = 32,
-                                                 class_mode = 'sparse')
-
-train_y=training_set.classes
-
-label_ids= training_set.class_indices
-
-
-def plot_images(images, labels, predictions=None, class_names=None):
-    assert len(images) == len(labels) == 9
-    
-    # Create figure with 3x3 sub-plots.
-    fig, axes = plt.subplots(3, 3, figsize=(20, 20))
-    fig.subplots_adjust(hspace=0.3, wspace=0.3)
-    
-    for i, ax in enumerate(axes.flat):
-        
-        # Plot image.
-        ax.imshow(images[i].squeeze(), cmap='gray')
-        
-        # Show true and predicted classes.
-        if predictions is None:
-            xlabel = "True: {0}".format(class_names[int(labels[i])])
-        else:
-            xlabel = "True: {0}, Pred: {1}".format(class_names[int(labels[i])],
-            class_names[int(predictions[i].argmax())])
-
-        ax.set_xlabel(xlabel)
-        
-        # Remove ticks from the plot.
-        ax.set_xticks([])
-        ax.set_yticks([])
-    
-    # Ensure the plot is shown correctly with multiple plots
-    # in a single Notebook cell.
-    plt.show()
-
-class_names = {value:key for key, value in label_ids.items()}
 """
+class_names = {value:key for key, value in label_ids.items()}
+
 plot_images(  #plot image in BGR format
     train_x[[1, 300, 600, 900, 1200, 1500, 1800, 2100, 2400]],
     train_y[[1, 300, 600, 900, 1200, 1500, 1800, 2100, 2400]],
@@ -97,45 +69,12 @@ plot_images(  #plot image in BGR format
 )
 """
 
-#shuffle sets using the shuffle function from sklearn (provided above)
-train_x, train_y = shuffle(train_x, train_y, random_state=1)
-#create test set
-from sklearn.model_selection import train_test_split
-train_x, test_x, train_y, test_y = train_test_split(train_x, train_y, test_size=0.33, random_state=1)
-
-train_labels = train_y
-train_images = train_x
-
-test_labels = test_y
-test_images = test_x
-
-
-# Normalization
-train_images = train_images / 255.0
-test_images = test_images/255.0
-################# code here ###################
-
-#Onehot Encoding the labels.
-from tensorflow.keras.utils import to_categorical
-train_labels=to_categorical(train_labels)
-test_labels=to_categorical(test_labels)
-
-
-# Number of samples and image dimension (images are squared)
-num_samples = train_x.shape[0]
-img_shape = train_x.shape[1]
-
-print(num_samples)
-print(img_shape)
-
-np.random.seed(1000)
-
 num_classes = 13
 
 #######CREATION OF THE MODEL#################
+#reference: https://keras.io/api/applications/
 # create the base pre-trained model
 base_model = tf.keras.applications.InceptionV3(include_top=False, weights="imagenet", input_shape=(256, 256, 3))
-
 
 # get the layer with output shape None 14 14
 lastlayer = base_model.get_layer('mixed7')
@@ -145,7 +84,7 @@ old_output = lastlayer.output
 x = layers.Flatten()(old_output)
 # let's add a fully-connected layer
 x = Dense(1024, activation='relu')(x)
-# and a logistic layer -- let's say we have 200 classes
+# and a logistic layer --  we have 13 classes
 predictions = Dense(num_classes, activation='softmax')(x)
 
 # this is the model we will train
