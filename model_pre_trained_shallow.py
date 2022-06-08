@@ -10,6 +10,7 @@ Original file is located at
 import tensorflow as tf
 import matplotlib.pyplot as plt
 import numpy as np
+from tensorflow import keras
 
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Dense, GlobalAveragePooling2D
@@ -68,27 +69,14 @@ num_classes = 13
 #######CREATION OF THE MODEL#################
 #reference: https://keras.io/api/applications/
 # create the base pre-trained model
-base_model = tf.keras.applications.InceptionV3(include_top=False, weights="imagenet", input_shape=(180, 180, 3))
-
-
-# Flatten the output layer for remove all of the dimensions except for one.
-x = base_model.output
-x = GlobalAveragePooling2D()(x)
-# let's add a fully-connected layer
-x = Dense(1024, activation='relu')(x)
-# and a logistic layer --  we have 13 classes
-predictions = Dense(num_classes, activation='softmax')(x)
-
-# this is the model we will train
-model = Model(inputs=base_model.input, outputs=predictions)
-
-#model.summary()
-#######END CREATION OF THE MODEL#################
-
-# first: train only the top layers (which were randomly initialized)
-# i.e. freeze all convolutional InceptionV3 layers
-for layer in base_model.layers:
-    layer.trainable = False
+model = keras.models.Sequential([
+    keras.layers.Conv2D(filters=32, kernel_size=[3,3], activation='relu', input_shape=[180, 180,3]),
+    keras.layers.MaxPool2D(pool_size=[2,2]),
+    keras.layers.Conv2D(filters=16, kernel_size=[2,2], activation='relu'),
+    keras.layers.MaxPool2D(pool_size=(2,2)),
+    keras.layers.Flatten(),
+    keras.layers.Dense(num_classes, activation="softmax")
+  ])
 
 # compile the model (should be done *after* setting layers to non-trainable)
 model.compile(optimizer='adam', metrics=['accuracy'], loss='categorical_crossentropy')
@@ -109,42 +97,11 @@ print(class_weights)
 # train the model on the new data for a few epochs
 history = model.fit(
       x=train_generator,
-      epochs=2,
-      validation_data=validation_generator,
-      verbose=1,
-      class_weight = class_weights)
-
-
-# at this point, the top layers are well trained and we can start fine-tuning
-# convolutional layers from inception V3. We will freeze the bottom N layers
-# and train the remaining top layers.
-
-# let's visualize layer names and layer indices to see how many layers
-# we should freeze:
-for i, layer in enumerate(base_model.layers):
-   print(i, layer.name)
-
-
-# we chose to train the top 2 inception blocks, i.e. we will freeze
-# the first 249 layers and unfreeze the rest:
-for layer in model.layers[:249]:
-   layer.trainable = False
-for layer in model.layers[249:]:
-   layer.trainable = True
-
-# we need to recompile the model for these modifications to take effect
-# we use SGD with a low learning rate
-from tensorflow.keras.optimizers import SGD
-model.compile(optimizer=SGD(learning_rate=0.0001, momentum=0.9), loss='categorical_crossentropy', metrics=['mae', 'acc'])
-
-# we train our model again (this time fine-tuning the top 2 inception blocks
-# alongside the top Dense layers)
-history = model.fit(
-      x=train_generator,
       epochs=5,
       validation_data=validation_generator,
       verbose=1,
       class_weight = class_weights)
+
 
 
 tf.keras.models.save_model(model, 'D:/Project_DF/Vception_model_mio.h5')

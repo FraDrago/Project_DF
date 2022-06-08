@@ -10,10 +10,15 @@ Original file is located at
 import tensorflow as tf
 import matplotlib.pyplot as plt
 import numpy as np
+from keras.models import Sequential
+from keras.layers import Dense, Activation, Dropout, Flatten, Conv2D, MaxPooling2D, BatchNormalization,ZeroPadding2D
+
 
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Dense, GlobalAveragePooling2D
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
+
+
 
 import os
 import cv2
@@ -66,35 +71,28 @@ test_generator = test_datagen.flow_from_directory(
 num_classes = 13
 
 #######CREATION OF THE MODEL#################
-#reference: https://keras.io/api/applications/
-# create the base pre-trained model
-base_model = tf.keras.applications.InceptionV3(include_top=False, weights="imagenet", input_shape=(180, 180, 3))
-
-
-# Flatten the output layer for remove all of the dimensions except for one.
-x = base_model.output
-x = GlobalAveragePooling2D()(x)
-# let's add a fully-connected layer
-x = Dense(1024, activation='relu')(x)
-# and a logistic layer --  we have 13 classes
-predictions = Dense(num_classes, activation='softmax')(x)
-
-# this is the model we will train
-model = Model(inputs=base_model.input, outputs=predictions)
-
-#model.summary()
-#######END CREATION OF THE MODEL#################
-
-# first: train only the top layers (which were randomly initialized)
-# i.e. freeze all convolutional InceptionV3 layers
-for layer in base_model.layers:
-    layer.trainable = False
-
-# compile the model (should be done *after* setting layers to non-trainable)
-model.compile(optimizer='adam', metrics=['accuracy'], loss='categorical_crossentropy')
-
-#balance class weights for imbalanced classes
-#https://stackoverflow.com/questions/42586475/is-it-possible-to-automatically-infer-the-class-weight-from-flow-from-directory
+#Instantiation
+alexnet=Sequential()
+alexnet.add(Conv2D(96,kernel_size=(11,11),strides=(4,4),activation='relu', input_shape=(180,180,3)))
+alexnet.add(MaxPooling2D(pool_size=(3,3),strides=(2,2)))
+alexnet.add(ZeroPadding2D((2,2)))
+alexnet.add(Conv2D(256,kernel_size=(5,5),activation='relu',strides=(1,1
+)))
+alexnet.add(MaxPooling2D(pool_size=(3,3),strides=(2,2)))
+alexnet.add(ZeroPadding2D((1,1)))
+alexnet.add(Conv2D(384,kernel_size=(3,3),activation='relu'))
+alexnet.add(ZeroPadding2D((1,1)))
+alexnet.add(Conv2D(384,kernel_size=(3,3),activation='relu'))
+alexnet.add(ZeroPadding2D((1,1)))
+alexnet.add(Conv2D(256,kernel_size=(3,3),activation='relu'))
+alexnet.add(MaxPooling2D(pool_size=(3,3),strides=(2,2)))
+alexnet.add(Flatten())
+alexnet.add(Dense(512,activation='relu'))
+alexnet.add(Dense(512,activation='relu'))
+alexnet.add(Dense(13,activation='softmax'))
+alexnet.compile(loss='categorical_crossentropy',optimizer='sgd',metrics
+=["accuracy"])
+alexnet.summary()
 
 from collections import Counter
 
@@ -105,41 +103,8 @@ max_val = float(max(counter.values()))
 class_weights = {class_id : max_val/num_images for class_id, num_images in counter.items()} 
 print(class_weights)
 
-
 # train the model on the new data for a few epochs
-history = model.fit(
-      x=train_generator,
-      epochs=2,
-      validation_data=validation_generator,
-      verbose=1,
-      class_weight = class_weights)
-
-
-# at this point, the top layers are well trained and we can start fine-tuning
-# convolutional layers from inception V3. We will freeze the bottom N layers
-# and train the remaining top layers.
-
-# let's visualize layer names and layer indices to see how many layers
-# we should freeze:
-for i, layer in enumerate(base_model.layers):
-   print(i, layer.name)
-
-
-# we chose to train the top 2 inception blocks, i.e. we will freeze
-# the first 249 layers and unfreeze the rest:
-for layer in model.layers[:249]:
-   layer.trainable = False
-for layer in model.layers[249:]:
-   layer.trainable = True
-
-# we need to recompile the model for these modifications to take effect
-# we use SGD with a low learning rate
-from tensorflow.keras.optimizers import SGD
-model.compile(optimizer=SGD(learning_rate=0.0001, momentum=0.9), loss='categorical_crossentropy', metrics=['mae', 'acc'])
-
-# we train our model again (this time fine-tuning the top 2 inception blocks
-# alongside the top Dense layers)
-history = model.fit(
+history = alexnet.fit(
       x=train_generator,
       epochs=5,
       validation_data=validation_generator,
@@ -147,10 +112,11 @@ history = model.fit(
       class_weight = class_weights)
 
 
-tf.keras.models.save_model(model, 'D:/Project_DF/Vception_model_mio.h5')
+
+tf.keras.models.save_model(alexnet, 'D:/Project_DF/Vception_model_mio.h5')
 
 
-predict=model.predict_generator(test_generator)
+predict=alexnet.predict_generator(test_generator)
 y_classes = np.argmax(predict, axis=1)
 print(test_generator.classes)
 

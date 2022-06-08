@@ -23,12 +23,10 @@ face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_fronta
 
 """Load the Drive helper and mount"""
 
-#from google.colab import drive
-#drive.mount('/content/gdrive')
 
 """I take the already trained model from the drive and I compile it"""
 
-model = tf.keras.models.load_model('C:/Users/Franc/OneDrive/Desktop/AAAprogetto/model_Classifier_retrain.h5')
+model = tf.keras.models.load_model('D:/Project_DF/Vception_model_mio.h5')
 
 model.compile(loss="sparse_categorical_crossentropy",
               optimizer='adam',
@@ -39,10 +37,38 @@ label_ids = {'Adam Sandler': 0, 'Alyssa Milano': 1, 'Bruce Willis': 2, 'Denise R
 class_names = {value:key for key, value in label_ids.items()}
 print(class_names[0])
 
-"""Simple example of how the cascade classifier work
+
+"""Face Prediction
+
+Simple example of how the cascade classifier work
 """
 
-video = cv2.VideoCapture('C:/Users/Franc/OneDrive/Desktop/PROGETTO/will1.mp4')  #se non carico il video direttamente quando lo controllo da errore, non so perchè
+video = cv2.VideoCapture('D:/Project_DF/will2.mp4')  #load the video
+
+length = int(video.get(cv2.CAP_PROP_FRAME_COUNT)) #count the number of frames
+print( "frames number:", length )
+
+for it in range(20): #From the first to the last frame
+  success, img = video.read() #returns is a boolean (True/False) and image content
+  gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+  #Use cascade to detect faces, this method use the gray image (lo vedo sempre usare così, poi bhooo)
+  faces = face_cascade.detectMultiScale(gray, 1.3, 5)
+
+  for (x,y,w,h) in faces:
+    cv2.rectangle(img,(x,y),(x+w,y+h),(255,0,0),2)
+    roi_gray = gray[y:y+h, x:x+w]
+    roi_color = img[y:y+h, x:x+w]
+    # Code for implement eyes detection
+    #eyes = eye_cascade.detectMultiScale(roi_gray)
+    #for (ex,ey,ew,eh) in eyes:
+    #    cv2.rectangle(roi_color,(ex,ey),(ex+ew,ey+eh),(0,255,0),2)
+    # End of the code for implement eyes detection
+
+  cv2.imshow("img", img)
+
+"""**PROVO A PREDIRE**  MANCA IL DATASET QUINDI NON FUNZIONA"""
+
+video = cv2.VideoCapture('D:/Project_DF/will2.mp4')  #se non carico il video direttamente quando lo controllo da errore, non so perchè
 
 length = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
 print( "frames number:", length )
@@ -63,22 +89,20 @@ for it in range(20): #From the first to the last frame
     #    cv2.rectangle(roi_color,(ex,ey),(ex+ew,ey+eh),(0,255,0),2)
     # FINE OCCHI
     #RESIZE VARI, in modo da far si che le immagini abbiano lo stesso input di quelle con cui abbiamo addestrato il modello
-    roi_color=cv2.resize(roi_color,(256,256)) #e altre robette che solo con il dataset possiamo iniziare a fare
+    roi_color=cv2.resize(roi_color,(180,180)) #e altre robette che solo con il dataset possiamo iniziare a fare
     roi_color = np.asarray(roi_color).astype(float)
     roi_color = roi_color/255      
     roi_color = tf.convert_to_tensor(roi_color, dtype=tf.float32)
-    tf.reshape(roi_color, [1,256,256,3])
+    #tf.reshape(roi_color, [1,180,180,3])
     #Fine RESIZE VARI
-    prediction = model.predict(tf.reshape(roi_color, [1,256,256,3]))
+    prediction = model.predict(tf.reshape(roi_color, [1,180,180,3]))
     ind = np.argmax(prediction)
     print("attore numero: ", ind, "nome: ", class_names[ind])
 
 
-  cv2.imshow('img', img)
-
+  cv2.imshow("img", img)
 
 video.release()
-#out.release()
 
 
 
