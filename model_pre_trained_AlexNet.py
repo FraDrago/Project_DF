@@ -11,7 +11,7 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 import numpy as np
 from keras.models import Sequential
-from keras.layers import Dense, Activation, Dropout, Flatten, Conv2D, MaxPooling2D, BatchNormalization,ZeroPadding2D
+from keras.layers import Dense, Activation, Dropout, Flatten, Conv2D, MaxPooling2D, BatchNormalization,ZeroPadding2D, MaxPool2D
 
 
 from tensorflow.keras.models import Model
@@ -70,29 +70,30 @@ test_generator = test_datagen.flow_from_directory(
 
 num_classes = 13
 
-#######CREATION OF THE MODEL#################
+#######CREATION OF THE AlexNet MODEL#################
+# https://thecleverprogrammer.com/2021/12/13/alexnet-architecture-using-python/
 #Instantiation
-alexnet=Sequential()
-alexnet.add(Conv2D(96,kernel_size=(11,11),strides=(4,4),activation='relu', input_shape=(180,180,3)))
-alexnet.add(MaxPooling2D(pool_size=(3,3),strides=(2,2)))
-alexnet.add(ZeroPadding2D((2,2)))
-alexnet.add(Conv2D(256,kernel_size=(5,5),activation='relu',strides=(1,1
-)))
-alexnet.add(MaxPooling2D(pool_size=(3,3),strides=(2,2)))
-alexnet.add(ZeroPadding2D((1,1)))
-alexnet.add(Conv2D(384,kernel_size=(3,3),activation='relu'))
-alexnet.add(ZeroPadding2D((1,1)))
-alexnet.add(Conv2D(384,kernel_size=(3,3),activation='relu'))
-alexnet.add(ZeroPadding2D((1,1)))
-alexnet.add(Conv2D(256,kernel_size=(3,3),activation='relu'))
-alexnet.add(MaxPooling2D(pool_size=(3,3),strides=(2,2)))
-alexnet.add(Flatten())
-alexnet.add(Dense(512,activation='relu'))
-alexnet.add(Dense(512,activation='relu'))
-alexnet.add(Dense(13,activation='softmax'))
-alexnet.compile(loss='categorical_crossentropy',optimizer='sgd',metrics
+model = Sequential()
+model.add(Conv2D(filters=96, kernel_size=(11, 11), strides=(4, 4), activation="relu", input_shape=(180, 180, 3)))
+model.add(BatchNormalization())
+model.add(MaxPool2D(pool_size=(3, 3), strides= (2, 2)))
+model.add(Conv2D(filters=256, kernel_size=(5, 5), strides=(1, 1), activation="relu", padding="same"))
+model.add(BatchNormalization())
+model.add(MaxPool2D(pool_size=(3, 3), strides=(2, 2)))
+model.add(Conv2D(filters=384, kernel_size=(3, 3), strides=(1, 1), activation="relu", padding="same"))
+model.add(BatchNormalization())
+model.add(Conv2D(filters=384, kernel_size=(3, 3), strides=(1, 1), activation="relu", padding="same"))
+model.add(BatchNormalization())
+model.add(Conv2D(filters=256, kernel_size=(3, 3), strides=(1, 1), activation="relu", padding="same"))
+model.add(BatchNormalization())
+model.add(MaxPool2D(pool_size=(3, 3), strides=(2, 2)))
+model.add(Flatten())
+model.add(Dense(4096, activation="relu"))
+model.add(Dropout(0.5))
+model.add(Dense(13, activation="softmax"))
+model.compile(loss='categorical_crossentropy',optimizer='sgd',metrics
 =["accuracy"])
-alexnet.summary()
+model.summary()
 
 from collections import Counter
 
@@ -103,20 +104,23 @@ max_val = float(max(counter.values()))
 class_weights = {class_id : max_val/num_images for class_id, num_images in counter.items()} 
 print(class_weights)
 
+callback = tf.keras.callbacks.EarlyStopping(monitor="val_loss", patience=2)
+
 # train the model on the new data for a few epochs
-history = alexnet.fit(
+history = model.fit(
       x=train_generator,
-      epochs=5,
+      epochs=10,
       validation_data=validation_generator,
       verbose=1,
-      class_weight = class_weights)
+      class_weight = class_weights,
+      callbacks=[callback])
 
 
 
-tf.keras.models.save_model(alexnet, 'D:/Project_DF/Vception_model_mio.h5')
+tf.keras.models.save_model(model, 'D:/Project_DF/AldfsfdsfdsfdexNet_model.h5')
 
 
-predict=alexnet.predict_generator(test_generator)
+predict=model.predict_generator(test_generator)
 y_classes = np.argmax(predict, axis=1)
 print(test_generator.classes)
 

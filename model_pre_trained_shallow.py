@@ -67,8 +67,6 @@ test_generator = test_datagen.flow_from_directory(
 num_classes = 13
 
 #######CREATION OF THE MODEL#################
-#reference: https://keras.io/api/applications/
-# create the base pre-trained model
 model = keras.models.Sequential([
     keras.layers.Conv2D(filters=32, kernel_size=[3,3], activation='relu', input_shape=[180, 180,3]),
     keras.layers.MaxPool2D(pool_size=[2,2]),
@@ -78,7 +76,7 @@ model = keras.models.Sequential([
     keras.layers.Dense(num_classes, activation="softmax")
   ])
 
-# compile the model (should be done *after* setting layers to non-trainable)
+# compile the model
 model.compile(optimizer='adam', metrics=['accuracy'], loss='categorical_crossentropy')
 
 #balance class weights for imbalanced classes
@@ -87,26 +85,28 @@ model.compile(optimizer='adam', metrics=['accuracy'], loss='categorical_crossent
 from collections import Counter
 
 counter = Counter(validation_generator.classes) 
-print("validation_generator.classes", validation_generator.classes)                         
 print("counter", counter)                         
 max_val = float(max(counter.values()))       
 class_weights = {class_id : max_val/num_images for class_id, num_images in counter.items()} 
-print(class_weights)
+print("class weights:", class_weights)
 
+callback = tf.keras.callbacks.EarlyStopping(monitor="val_loss", patience=2)
 
 # train the model on the new data for a few epochs
 history = model.fit(
       x=train_generator,
-      epochs=5,
+      epochs=10,
       validation_data=validation_generator,
       verbose=1,
-      class_weight = class_weights)
+      class_weight = class_weights,
+      callbacks=[callback])
 
 
+# save the model
+tf.keras.models.save_model(model, 'D:/Project_DF/shallow_trained_model.h5')
 
-tf.keras.models.save_model(model, 'D:/Project_DF/Vception_model_mio.h5')
 
-
+#Test the model with the test set and print confusion matrix
 predict=model.predict_generator(test_generator)
 y_classes = np.argmax(predict, axis=1)
 print(test_generator.classes)

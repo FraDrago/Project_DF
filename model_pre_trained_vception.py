@@ -82,8 +82,6 @@ predictions = Dense(num_classes, activation='softmax')(x)
 # this is the model we will train
 model = Model(inputs=base_model.input, outputs=predictions)
 
-#model.summary()
-#######END CREATION OF THE MODEL#################
 
 # first: train only the top layers (which were randomly initialized)
 # i.e. freeze all convolutional InceptionV3 layers
@@ -99,11 +97,10 @@ model.compile(optimizer='adam', metrics=['accuracy'], loss='categorical_crossent
 from collections import Counter
 
 counter = Counter(validation_generator.classes) 
-print("validation_generator.classes", validation_generator.classes)                         
 print("counter", counter)                         
 max_val = float(max(counter.values()))       
 class_weights = {class_id : max_val/num_images for class_id, num_images in counter.items()} 
-print(class_weights)
+print("class weights:", class_weights)
 
 
 # train the model on the new data for a few epochs
@@ -125,8 +122,7 @@ for i, layer in enumerate(base_model.layers):
    print(i, layer.name)
 
 
-# we chose to train the top 2 inception blocks, i.e. we will freeze
-# the first 249 layers and unfreeze the rest:
+# we chose to train the top 2 inception blocks, i.e. we will freeze the first 249 layers and unfreeze the rest:
 for layer in model.layers[:249]:
    layer.trainable = False
 for layer in model.layers[249:]:
@@ -135,7 +131,7 @@ for layer in model.layers[249:]:
 # we need to recompile the model for these modifications to take effect
 # we use SGD with a low learning rate
 from tensorflow.keras.optimizers import SGD
-model.compile(optimizer=SGD(learning_rate=0.0001, momentum=0.9), loss='categorical_crossentropy', metrics=['mae', 'acc'])
+model.compile(optimizer=SGD(learning_rate=0.0001, momentum=0.9), loss='categorical_crossentropy', metrics=['accuracy'])
 
 # we train our model again (this time fine-tuning the top 2 inception blocks
 # alongside the top Dense layers)
@@ -145,11 +141,14 @@ history = model.fit(
       validation_data=validation_generator,
       verbose=1,
       class_weight = class_weights)
+#######END CREATION OF THE MODEL#################
 
 
+# save the model
 tf.keras.models.save_model(model, 'D:/Project_DF/Vception_model_mio.h5')
 
 
+#Test the model with the test set and print confusion matrix
 predict=model.predict_generator(test_generator)
 y_classes = np.argmax(predict, axis=1)
 print(test_generator.classes)

@@ -21,8 +21,6 @@ https://www.bogotobogo.com/python/OpenCV_Python/python_opencv3_Image_Object_Dete
 face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
 #eye_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_eye.xml')
 
-"""Load the Drive helper and mount"""
-
 
 """I take the already trained model from the drive and I compile it"""
 
@@ -43,32 +41,8 @@ print(class_names[0])
 Simple example of how the cascade classifier work
 """
 
-video = cv2.VideoCapture('D:/Project_DF/will2.mp4')  #load the video
 
-length = int(video.get(cv2.CAP_PROP_FRAME_COUNT)) #count the number of frames
-print( "frames number:", length )
-
-for it in range(20): #From the first to the last frame
-  success, img = video.read() #returns is a boolean (True/False) and image content
-  gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-  #Use cascade to detect faces, this method use the gray image (lo vedo sempre usare così, poi bhooo)
-  faces = face_cascade.detectMultiScale(gray, 1.3, 5)
-
-  for (x,y,w,h) in faces:
-    cv2.rectangle(img,(x,y),(x+w,y+h),(255,0,0),2)
-    roi_gray = gray[y:y+h, x:x+w]
-    roi_color = img[y:y+h, x:x+w]
-    # Code for implement eyes detection
-    #eyes = eye_cascade.detectMultiScale(roi_gray)
-    #for (ex,ey,ew,eh) in eyes:
-    #    cv2.rectangle(roi_color,(ex,ey),(ex+ew,ey+eh),(0,255,0),2)
-    # End of the code for implement eyes detection
-
-  cv2.imshow("img", img)
-
-"""**PROVO A PREDIRE**  MANCA IL DATASET QUINDI NON FUNZIONA"""
-
-video = cv2.VideoCapture('D:/Project_DF/will2.mp4')  #se non carico il video direttamente quando lo controllo da errore, non so perchè
+video = cv2.VideoCapture('D:/Project_DF/hugh.mp4') 
 
 length = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
 print( "frames number:", length )
@@ -76,28 +50,23 @@ print( "frames number:", length )
 for it in range(20): #From the first to the last frame
   success, img = video.read() #returns is a boolean (True/False) and image content
   gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-  #Use cascade to detect faces, this method use the gray image (lo vedo sempre usare così, poi bhooo)
-  faces = face_cascade.detectMultiScale(gray, 1.3, 5)
+  #Use cascade to detect faces
+  faces = face_cascade.detectMultiScale(gray, 1.1, 4)
 
   for (x,y,w,h) in faces:
     cv2.rectangle(img,(x,y),(x+w,y+h),(255,0,0),2)
     roi_gray = gray[y:y+h, x:x+w]
     roi_color = img[y:y+h, x:x+w]
-    # OCCHI, forse li usiamo per la cosa delle mascherine
-    #eyes = eye_cascade.detectMultiScale(roi_gray)
-    #for (ex,ey,ew,eh) in eyes:
-    #    cv2.rectangle(roi_color,(ex,ey),(ex+ew,ey+eh),(0,255,0),2)
-    # FINE OCCHI
-    #RESIZE VARI, in modo da far si che le immagini abbiano lo stesso input di quelle con cui abbiamo addestrato il modello
-    roi_color=cv2.resize(roi_color,(180,180)) #e altre robette che solo con il dataset possiamo iniziare a fare
+    #RESIZE, take the faces and put the same shape of those used for the model
+    roi_color=cv2.resize(roi_color,(180,180))
     roi_color = np.asarray(roi_color).astype(float)
     roi_color = roi_color/255      
     roi_color = tf.convert_to_tensor(roi_color, dtype=tf.float32)
     #tf.reshape(roi_color, [1,180,180,3])
-    #Fine RESIZE VARI
+    #END RESIZE
     prediction = model.predict(tf.reshape(roi_color, [1,180,180,3]))
     ind = np.argmax(prediction)
-    print("attore numero: ", ind, "nome: ", class_names[ind])
+    print("Actor number: ", ind, "name: ", class_names[ind])
 
 
   cv2.imshow("img", img)
