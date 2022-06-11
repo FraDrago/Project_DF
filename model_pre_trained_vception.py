@@ -18,15 +18,8 @@ from tensorflow.keras.preprocessing.image import ImageDataGenerator
 import os
 import cv2
 
-train_path="C:/Users/Franc/OneDrive/Desktop/PROGETTO/Dataset/PeopleFace"
 
 ##I extract images from the folders and create the dataset train_x
-
-
-img1 = cv2.imread('D:/Project_DF/FaceRecogRefSoft/croppedfaces/George Clooney/1.jpg')
-img2 = cv2.imread('D:/Project_DF/FaceRecogRefSoft/data/PeopleFace/George Clooney/newcpp_0.jpg')
-print(img1.shape)
-print(img2.shape)
 
 
 

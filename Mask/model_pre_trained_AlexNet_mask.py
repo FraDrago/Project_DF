@@ -10,36 +10,42 @@ Original file is located at
 import tensorflow as tf
 import matplotlib.pyplot as plt
 import numpy as np
-from tensorflow import keras
+from keras.models import Sequential
+from keras.layers import Dense, Activation, Dropout, Flatten, Conv2D, MaxPooling2D, BatchNormalization,ZeroPadding2D, MaxPool2D
+
 
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Dense, GlobalAveragePooling2D
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 
+
+
 import os
 import cv2
 
+train_path='D:/Project_DF/FaceRecogRefSoft/croppedfacesMask'
 
 ##I extract images from the folders and create the dataset train_x
-
-
-
 train_datagen = ImageDataGenerator(
         rescale=1./255,
+        shear_range=0.2,
+        zoom_range=0.2,
+        horizontal_flip=True, 
+        vertical_flip=True,
         fill_mode='nearest',
         validation_split=0.2)
 
 test_datagen = ImageDataGenerator(rescale=1 / 255.0)
 
 train_generator = train_datagen.flow_from_directory(
-        'D:/Project_DF/FaceRecogRefSoft/croppedfaces',
+        train_path,
         target_size=(180, 180),
         batch_size=32,
         class_mode='categorical',
         subset='training') #set as training data
 
 validation_generator = train_datagen.flow_from_directory(
-    'D:/Project_DF/FaceRecogRefSoft/croppedfaces', #same directory as training data
+    train_path, #same directory as training data
     target_size=(180, 180),
     batch_size=32,
     class_mode='categorical',
@@ -47,59 +53,59 @@ validation_generator = train_datagen.flow_from_directory(
     shuffle=False
     ) #set as validation data
 
-test_generator = test_datagen.flow_from_directory(
-    directory='D:/Project_DF/FaceRecogRefSoft/croppedfacesTest',
-    target_size=(180, 180),
-    batch_size=32,
-    class_mode='categorical',
-    shuffle=False
-)
-
-
 
 num_classes = 13
 
-#######CREATION OF THE MODEL#################
-model = keras.models.Sequential([
-    keras.layers.Conv2D(filters=32, kernel_size=[3,3], activation='relu', input_shape=[180, 180,3]),
-    keras.layers.MaxPool2D(pool_size=[2,2]),
-    keras.layers.Conv2D(filters=16, kernel_size=[2,2], activation='relu'),
-    keras.layers.MaxPool2D(pool_size=(2,2)),
-    keras.layers.Flatten(),
-    keras.layers.Dense(num_classes, activation="softmax")
-  ])
-
-# compile the model
-model.compile(optimizer='adam', metrics=['accuracy'], loss='categorical_crossentropy')
-
-#balance class weights for imbalanced classes
-#https://stackoverflow.com/questions/42586475/is-it-possible-to-automatically-infer-the-class-weight-from-flow-from-directory
+#######CREATION OF THE AlexNet MODEL#################
+# https://thecleverprogrammer.com/2021/12/13/alexnet-architecture-using-python/
+#Instantiation
+model = Sequential()
+model.add(Conv2D(filters=96, kernel_size=(11, 11), strides=(4, 4), activation="relu", input_shape=(180, 180, 3)))
+model.add(BatchNormalization())
+model.add(MaxPool2D(pool_size=(3, 3), strides= (2, 2)))
+model.add(Conv2D(filters=256, kernel_size=(5, 5), strides=(1, 1), activation="relu", padding="same"))
+model.add(BatchNormalization())
+model.add(MaxPool2D(pool_size=(3, 3), strides=(2, 2)))
+model.add(Conv2D(filters=384, kernel_size=(3, 3), strides=(1, 1), activation="relu", padding="same"))
+model.add(BatchNormalization())
+model.add(Conv2D(filters=384, kernel_size=(3, 3), strides=(1, 1), activation="relu", padding="same"))
+model.add(BatchNormalization())
+model.add(Conv2D(filters=256, kernel_size=(3, 3), strides=(1, 1), activation="relu", padding="same"))
+model.add(BatchNormalization())
+model.add(MaxPool2D(pool_size=(3, 3), strides=(2, 2)))
+model.add(Flatten())
+model.add(Dense(4096, activation="relu"))
+model.add(Dropout(0.5))
+model.add(Dense(13, activation="softmax"))
+model.compile(loss='categorical_crossentropy',optimizer='sgd',metrics
+=["accuracy"])
+model.summary()
 
 from collections import Counter
 
 counter = Counter(validation_generator.classes) 
+print("validation_generator.classes", validation_generator.classes)                         
 print("counter", counter)                         
 max_val = float(max(counter.values()))       
 class_weights = {class_id : max_val/num_images for class_id, num_images in counter.items()} 
-print("class weights:", class_weights)
+print(class_weights)
 
 callback = tf.keras.callbacks.EarlyStopping(monitor="val_loss", patience=2)
 
 # train the model on the new data for a few epochs
 history = model.fit(
       x=train_generator,
-      epochs=10,
+      epochs=20,
       validation_data=validation_generator,
       verbose=1,
       class_weight = class_weights,
       callbacks=[callback])
 
 
-# save the model
-tf.keras.models.save_model(model, 'D:/Project_DF/shallow_trained_model.h5')
+
+tf.keras.models.save_model(model, 'D:/Project_DF/Mask_AlexNet.h5')
 
 
-#Test the model with the test set and print confusion matrix
 predict=model.predict_generator(test_generator)
 y_classes = np.argmax(predict, axis=1)
 print(test_generator.classes)
