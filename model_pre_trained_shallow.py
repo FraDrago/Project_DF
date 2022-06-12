@@ -12,12 +12,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 from tensorflow import keras
 
-from tensorflow.keras.models import Model
-from tensorflow.keras.layers import Dense, GlobalAveragePooling2D
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 
 import os
-import cv2
 
 
 ##I extract images from the folders and create the dataset train_x
