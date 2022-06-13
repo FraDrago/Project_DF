@@ -128,17 +128,38 @@ model.compile(optimizer=SGD(learning_rate=0.0001, momentum=0.9), loss='categoric
 
 # we train our model again (this time fine-tuning the top 2 inception blocks
 # alongside the top Dense layers)
+callback = tf.keras.callbacks.EarlyStopping(monitor="val_loss", patience=2)
+
 history = model.fit(
       x=train_generator,
-      epochs=5,
+      epochs=10,
       validation_data=validation_generator,
       verbose=1,
-      class_weight = class_weights)
+      class_weight = class_weights,
+      callbacks=[callback])
 #######END CREATION OF THE MODEL#################
 
 
 # save the model
 tf.keras.models.save_model(model, 'D:/Project_DF/Vception_model_mio.h5')
+
+
+# summarize history for accuracy
+plt.plot(history.history['accuracy'])
+plt.plot(history.history['val_accuracy'])
+plt.title('model accuracy')
+plt.ylabel('accuracy')
+plt.xlabel('epoch')
+plt.legend(['train', 'validation'], loc='upper left')
+plt.show()
+# summarize history for loss
+plt.plot(history.history['loss'])
+plt.plot(history.history['val_loss'])
+plt.title('model loss')
+plt.ylabel('loss')
+plt.xlabel('epoch')
+plt.legend(['train', 'validation'], loc='upper left')
+plt.show()
 
 
 #Test the model with the test set and print confusion matrix
@@ -148,10 +169,16 @@ print(test_generator.classes)
 
 import seaborn as sn
 import pandas as pd
-from sklearn.metrics import confusion_matrix
+from sklearn.metrics import confusion_matrix, classification_report
 
 cm = confusion_matrix(test_generator.classes, y_classes)
 print(cm)
+
+Y_pred = model.predict_generator(validation_generator) 
+y_pred = np.argmax(Y_pred, axis=1)
+
+target_names = list(train_generator.class_indices.keys())
+print(classification_report(validation_generator.classes, y_pred, target_names=target_names))
 
 class_names = ['Adam Sandler','Alyssa Milano', 'Bruce Willis', 'Denise Richards', 'George Clooney', 'Gwyneth Paltrow', 'Hugh Jackman', 'Jason Statham', 'Jennifer Love Hewitt', 'Lindsay Lohan', 'Mark Ruffalo', 'Robert Downey Jr', 'Will Smith']
 df_cm = pd.DataFrame(cm, index = class_names, columns = class_names)
